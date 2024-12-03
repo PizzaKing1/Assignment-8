@@ -1,17 +1,17 @@
 GCC = gcc -O3 -std=c99 -Wall -Wshadow -Wvla -pedantic
-SRCS = a6.c
+SRCS = a8.c
 OBJS = $(SRCS:%.c=%.o)
-TARGET = a6
+TARGET = a8
 default: $(OBJS)
 	$(GCC) $(OBJS) -o $(TARGET)
 
-test0: a6
-	./a6 points.txt
+test0: a8
+	./a8 points.txt
 
-test1: a6
-	./a6 p0.txt
+test1: a8
+	./a8 p0.txt
 	
 clean:
-	rm a6; rm *.o
+	rm a8; rm *.o
 	
 #gcc -O3 -std=c99 -Wall -Wshadow -Wvla -pedantic

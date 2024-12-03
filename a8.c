@@ -1,23 +1,114 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <math.h>
+#include <assert.h>
 
+typedef struct Edge {
+    int label;
+    int * weights;
+    struct Edge* next;
+    int num_weights;
+} Edge;
 
-struct Block {
-    char label;
-    int width;
-    int height;
-    struct Block *left;
-    struct Block *right;
-};
+typedef struct Graph {
+    Edge** adj_list;
+    int num_vertices;
+} Graph;
 
-struct array_stack {
-    int* arr;
+typedef struct {
+    int label;
+    int distance;
+    int t;
+    int* predecessor;
+} HeapNode;
+
+typedef struct {
     int size;
-    int top; // initial value = -1
-};
+    int capacity;
+    int *pos;
+    HeapNode **heap;
+    int size;
+} MinHeap;
 
+HeapNode* newHeapNode(int v, int dist) {
+    HeapNode* minHeapNode = (HeapNode*)malloc(sizeof(HeapNode));
+    minHeapNode->label = v;
+    minHeapNode->distance = dist;
+    //predecesor?
+    return minHeapNode;
+}
+MinHeap* createMinHeap(int capacity) {
+    MinHeap* minHeap = (MinHeap*)malloc(sizeof(MinHeap));
+    minHeap->capacity = capacity;
+    minHeap->size = 0;
+    minHeap->pos = (int*)malloc(capacity * sizeof(int));
+    minHeap->heap = (HeapNode**)malloc(capacity * sizeof(HeapNode*));
+    return minHeap;
+}
+
+void swap(HeapNode** a, HeapNode** b) {
+    HeapNode* temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+void minHeapify(MinHeap* minHeap, int index) {
+    int smallest = index;
+    int left = 2 * index + 1;
+    int right = 2 * index + 2;
+
+    if (left < minHeap->size && minHeap->heap[left]->distance < minHeap->heap[smallest]->distance) {
+        smallest = left;
+    }
+
+    if (right < minHeap->size && minHeap->heap[right]->distance < minHeap->heap[smallest]->distance) {
+        smallest = right;
+    }
+
+    if (smallest != index) {
+        swap(&minHeap->heap[index], &minHeap->heap[smallest]);
+        minHeapify(minHeap, smallest);
+    }
+}
+
+HeapNode extractMin(MinHeap* minHeap) {
+    if (minheap->size == 0) {
+        HeapNode emptyNode = {-1, INT_MAX};
+        return emptyNode;
+    }
+
+    HeapNode root = minHeap->heap[0];
+    minHeap->heap[0] = minHeap->heap[minHeap->size - 1];
+    minHeap->size--;
+    minHeapify(minHeap, 0);
+
+    return root;
+}
+
+void insertMinHeap(MinHeap* minHeap, HeapNode newNode) {
+    minHeap->size++;
+    int i = minHeap->size - 1;
+    minHeap->heap[i] = newNode;
+
+    while (i != 0 && minHeap->heap[(i-1)/2].distance > minHeap->heap[i].distance) {
+        swap(&minHeap->heap[i], &minHeap -> [(i-1)/2]);
+        i = (i-1)/2;
+    }
+}
+
+
+void add_edge(Graph *graph, int src, int dest, int t) {
+    Edge *newNode = malloc(sizeof(Edge));
+    newNode->label = dest; //Adjust tp include .1/.2 state
+    newNode->next = graph->adjList[src];
+    graph->adjList[src] = newNode;
+}
+
+
+typedef struct gnode {
+    int label;
+    //int weight;
+    struct gnode* next;
+} gnode;
 
 int count; 
 int c;
@@ -25,86 +116,104 @@ struct Block* arr;
 int i;
 char* buffer[20];
 
-void push(struct array_stack* stack, int value)
-{
-    if ((stack->top + 1) == stack->size)
-    {
-        int new_size = stack->size * 2; //why not increasing by a fixed size?
-        int* new_arr = (int*)realloc(stack->arr, new_size * sizeof(int));
-        assert(new_arr != NULL);
-        stack->arr = new_arr;
-        stack->size = new_size;
-    }
-    stack->arr[++stack->top] = value;
-} 
 
-int pop(struct list_stack* stack)
-{
-    assert(!is_empty(*(stack->list)));
-    int value = stack->list->head->value;
-    delete_head(stack->list);
-    return value;
+Graph* create_graph(int nv, int nw){
+    Graph *graph = (Graph*)malloc(sizeof(Graph));
+    graph -> num_vertices = nv * nw;
+    graph -> adj_list = (Edge**)malloc(nv * nw * sizeof(Edge*));
+
+    //initialize zero
+    for(int i = 0; i < nv; i++) {
+        graph->adj_list[i] = NULL;
+    }
+
+    return graph;
 }
 
+int main(int argc, char** argv) {
+    int nv = 0;
+    int nw = 0;
+    int src = 0;
+    int dest = 0;
+    int weight
 
-
-buildTree() {
+    //open file
     FILE* fp;
     fp = fopen(argv[1], "r");
-
     if(fp == NULL){
         printf("Error Opening File\n");
         return 0;
     }
 
-    i = 0;
-    char* delim = "(,)";
-    char* token;
-
-    struct array_stack stack;
-    stack.top = -1;
-    stack.size = 8;
-    stack.arr = (int *)malloc(8 * sizeof(int));
-
-    while(i <= count){
-        
-        fgets(buffer, 20, fp);
-        token = strtok(buffer, delim);
-        if(token != 'H' && token != 'V'){
-            struct Block* new = malloc(sizeof(struct Block));
-            new -> label = token;
-            token = strtok(buffer, delim);
-            new -> width = token;
-            token = strtok(buffer, delim);
-            new -> height = token;
-            push(&stack, new);
-        }
-        else{}
-        
-    }
-}
-
-preOrder() {
-
-}
-
-int main(int argc, char* argv[]) {
-
-    FILE* fp;
-    fp = fopen(argv[1], "r");
-
-    if(fp == NULL){
-        printf("Error Opening File\n");
+    //Read values from file
+    if(fscanf(fp, "%d %d\n", &nv, &nw) != 2){
+        fprintf(stderr, "scanning first line failed");
         return 0;
     }
-    count = 0;
-    for (c = fgetc(fp); c != EOF; c = fgetc(fp)){
-        if(c =='\n'){
-            count = count + 1;
+    
+    //create graph
+    Graph *graph = create_graph(nv, nw);
+
+    //read edges
+    fscanf(fp, "%d %d ", &src, &dest);
+    for (i = 0; i < nw; i++) {
+        if(fscanf(fp, "%d ", &weight) != 1) {
+            printf("Error reading integer from file");
+            break;
         }
+        add_edge(graph, src, dest, (i % nw) + 1)//Add cyclical weights here!
     }
+
     fclose(fp);
 
-    buildTree
-    //arr = malloc(sizeof(struct Block)*count);
+    //HeapNode* heap = 0;
+
 }
+    
+void enqueue(int* arr, int i) {
+    int temp = arr[i];
+    int j = i;
+ 
+    while (j > 0 && arr[(j-1)/2] < temp) {
+        arr[j] = arr[(j-1)/2];
+        j = (j-1)/2;
+    }
+    arr[j] = temp;
+}
+
+void dequeue(int* arr, int n) {
+    int temp = arr[n];
+    arr[n] = arr[0];
+    arr[0] = temp;
+
+    n--;
+
+    int i = 0, j;
+    while ((j = 2*i+1) <= n) {
+        if (j < n && arr[j] < arr[j+1])
+            j = j+1;
+        if (temp >= arr[j]) break;
+        else {
+            arr[i] = arr[j];
+            i = j;
+        }
+    }
+    arr[i] = temp;
+}
+
+
+void dijkstra(int **graph, int V, int source) {
+    int dist[V];
+    MinHeap* minHeap = createMinHeap(V);
+
+    for (int i = 0; i < V; i++) {
+        dist[i] = INT_MAX;
+        minHeap->nodes[i] = newNode(i, dist[i]);
+    }
+
+    struct tnode arr[SIZE];
+    int n = SIZE;
+    
+}
+    
+
